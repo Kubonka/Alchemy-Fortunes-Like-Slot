@@ -10,13 +10,12 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@pixi/math-extras": "^7.2.4",
     "@tweenjs/tween.js": "^21.0.0",
-    "cannon-es": "^0.20.0",
     "classnames": "^2.3.2",
-    "maath": "^0.7.0",
+    "pixi.js": "^7.2.4",
     "react": "^18.2.0",
-    "react-dom": "^18.2.0",
-    "three": "^0.153.0"
+    "react-dom": "^18.2.0"
   },
   "devDependencies": {
     "@types/react": "^18.0.37",

@@ -18,15 +18,10 @@ function App() {
   function handleToggleMenu() {
     main.current.toggleMenu();
     setMenu((p) => !p);
-    console.log(main.current.menu);
   }
   useEffect(() => {
     if (!firstMount.current) {
       main.current = new GameManager();
-      main.current.state = GameState.Initialize;
-      main.current.kbController.bindKey("Escape", () => {
-        handleToggleMenu();
-      });
       //baseGui.current = new BaseGui(); //? GUI DISABLED
     }
     return () => {
@@ -37,9 +32,7 @@ function App() {
 
   return (
     <>
-      <div className="absolute">
-        <canvas id="threeJsCanvas" />
-      </div>
+      <div id="pixiContainer" className="absolute"></div>
       {/* <UI /> */}
       {/* <Menu show={menu} changeState={handleChangeState} toggleMenu={handleToggleMenu} /> */}
     </>

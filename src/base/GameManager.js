@@ -1,5 +1,83 @@
+import BoardManager from "./Boardmanager";
+import GameState from "../helperClasses/GameState";
+import PixiApp from "./PixiApp";
+import * as PIXI from "pixi.js";
+import * as TWEEN from "@tweenjs/tween.js";
+import Gem from "./Gem";
+import Button from "./Button";
+
 class GameManager {
-  constructor() {}
+  #tickerId;
+  static #instance = null;
+  constructor() {
+    if (GameManager.#instance) {
+      return GameManager.#instance;
+    }
+    GameManager.#instance = this;
+    this.world = new PixiApp();
+    this.gem;
+    this.state = null;
+    this.#start();
+  }
+  async #start() {
+    await this.world.loadAssets();
+    const frames = [];
+    for (const gem in this.world.assets) {
+      for (const gemPath in this.world.assets[gem].textures) {
+        frames.push(this.world.assets[gem].textures[gemPath]);
+      }
+    }
+    this.boardManager = new BoardManager(this.world);
+    this.backGround = new PIXI.Sprite(this.world.assets.backGround);
+    this.backGround.position.set(-87, -45);
+
+    this.world.addChild(this.backGround);
+    this.spinButton = new Button(this.world, "wildGem", new PIXI.Point(700, 300));
+    this.spinButton.setOnClickHandler(() => {
+      if (this.state !== GameState.Animating) {
+        this.state = GameState.Animating;
+        this.boardManager.spin(() => (this.state = GameState.Loading));
+      }
+    });
+    this.#tickerId = this.world.app.ticker.add((delta) => this.#update(delta));
+    this.state = GameState.NewGame;
+    //this.#test();
+  }
+  #test() {
+    this.gem = new Gem(this.world, "ametistChip", new PIXI.Point(100, 100));
+    this.world.addChild(this.gem.sprite);
+    this.#move();
+  }
+  #move() {
+    const from = this.gem.sprite.position;
+    const to = new PIXI.Point(300, 300);
+    console.log(from, to);
+    const moveAnim = new TWEEN.Tween({ x: from.x, y: from.y }).to({ x: to.x, y: to.y }, 500);
+    moveAnim.onUpdate(({ x, y }, elapsed) => {
+      this.gem.sprite.position.set(x, y);
+    });
+    moveAnim.start();
+  }
+
+  #update() {
+    switch (this.state) {
+      case GameState.Initialize: {
+        break;
+      }
+      case GameState.NewGame:
+        break;
+      case GameState.Loading:
+        break;
+      case GameState.Animating:
+        break;
+      case GameState.PlayerTurn: {
+        break;
+      }
+
+      default:
+        break;
+    }
+  }
 }
 export default GameManager;
 // import SceneInit from "./SceneInit";

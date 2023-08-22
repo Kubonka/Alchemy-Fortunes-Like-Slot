@@ -3,5 +3,6 @@ const GameState = Object.freeze({
   NewGame: Symbol("NewGame"),
   Loading: Symbol("Loading"),
   Animating: Symbol("Animating"),
+  PlayerTurn: Symbol("PlayerTurn"),
 });
 export default GameState;
