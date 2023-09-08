@@ -1,6 +1,6 @@
 {
 	"frames": {
-		"WildGem0.png": {
+		"wildGem0.png": {
 			"frame": {
 				"x": 1,
 				"y": 1,
@@ -20,7 +20,7 @@
 				"h": 267
 			}
 		},
-		"WildGem1.png": {
+		"wildGem1.png": {
 			"frame": {
 				"x": 270,
 				"y": 1,
@@ -40,7 +40,7 @@
 				"h": 267
 			}
 		},
-		"WildGem2.png": {
+		"wildGem2.png": {
 			"frame": {
 				"x": 1,
 				"y": 270,
@@ -60,9 +60,49 @@
 				"h": 267
 			}
 		},
-		"WildGem3.png": {
+		"wildGem3.png": {
 			"frame": {
 				"x": 270,
+				"y": 270,
+				"w": 267,
+				"h": 267
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 267,
+				"h": 267
+			},
+			"sourceSize": {
+				"w": 267,
+				"h": 267
+			}
+		},
+		"wildGem4.png": {
+			"frame": {
+				"x": 539,
+				"y": 1,
+				"w": 267,
+				"h": 267
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 267,
+				"h": 267
+			},
+			"sourceSize": {
+				"w": 267,
+				"h": 267
+			}
+		},
+		"wildGem5.png": {
+			"frame": {
+				"x": 539,
 				"y": 270,
 				"w": 267,
 				"h": 267
@@ -87,7 +127,7 @@
 		"image": "spritesheet.png",
 		"format": "RGBA8888",
 		"size": {
-			"w": 538,
+			"w": 807,
 			"h": 538
 		},
 		"scale": "1"

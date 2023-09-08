@@ -1,6 +1,6 @@
 {
 	"frames": {
-		"DiamondChip0.png": {
+		"diamondChip0.png": {
 			"frame": {
 				"x": 1,
 				"y": 1,
@@ -20,7 +20,7 @@
 				"h": 267
 			}
 		},
-		"DiamondChip1.png": {
+		"diamondChip1.png": {
 			"frame": {
 				"x": 270,
 				"y": 1,
@@ -40,7 +40,7 @@
 				"h": 267
 			}
 		},
-		"DiamondChip2.png": {
+		"diamondChip2.png": {
 			"frame": {
 				"x": 1,
 				"y": 270,
@@ -60,9 +60,49 @@
 				"h": 267
 			}
 		},
-		"DiamondChip3.png": {
+		"diamondChip3.png": {
 			"frame": {
 				"x": 270,
+				"y": 270,
+				"w": 267,
+				"h": 267
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 267,
+				"h": 267
+			},
+			"sourceSize": {
+				"w": 267,
+				"h": 267
+			}
+		},
+		"diamondChip4.png": {
+			"frame": {
+				"x": 539,
+				"y": 1,
+				"w": 267,
+				"h": 267
+			},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {
+				"x": 0,
+				"y": 0,
+				"w": 267,
+				"h": 267
+			},
+			"sourceSize": {
+				"w": 267,
+				"h": 267
+			}
+		},
+		"diamondChip5.png": {
+			"frame": {
+				"x": 539,
 				"y": 270,
 				"w": 267,
 				"h": 267
@@ -87,7 +127,7 @@
 		"image": "spritesheet.png",
 		"format": "RGBA8888",
 		"size": {
-			"w": 538,
+			"w": 807,
 			"h": 538
 		},
 		"scale": "1"

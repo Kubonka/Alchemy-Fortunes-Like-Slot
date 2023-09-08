@@ -14,8 +14,8 @@ class BoardManager {
   //$----
   #movingGems = [];
   #gemsToRemove = [];
-
-  constructor(world) {
+  #onProfitHandler;
+  constructor(world, onProfitHandler) {
     /**
      * @type {PixiApp} world
      */
@@ -24,6 +24,7 @@ class BoardManager {
      *@type {Cell[][]} board
      */
     this.board = [];
+    this.#onProfitHandler = onProfitHandler;
     this.boardContainer = new PIXI.Container();
     this.boardContainer.position = new PIXI.Point(200, 200);
     this.world.addChild(this.boardContainer);
@@ -45,10 +46,11 @@ class BoardManager {
         this.board[i][j] = new Cell(this.world, i, j);
         this.board[i][j].createGem(
           gemNames[index],
-          new PIXI.Point(this.board[i][j].position.x, this.board[i][j].position.y - this.#boardHeight)
+          new PIXI.Point(this.board[i][j].position.x, this.board[i][j].position.y - this.#boardHeight),
+          this.boardContainer
         );
         this.board[i][j].gem.targetPos = new PIXI.Point(this.board[i][j].position.x, this.board[i][j].position.y);
-        this.boardContainer.addChild(this.board[i][j].gem.sprite);
+        //this.boardContainer.addChild(this.board[i][j].gem.sprite);
         index = index === gemNames.length - 1 ? 1 : index + 1;
       }
     }
@@ -79,41 +81,66 @@ class BoardManager {
       for (let j = 0; j < this.#cols; j++) {
         const cell = this.board[i][j];
         //? -1  -  limpiar gemas anteriores -> insertarlas en un array
-        this.#gemsToRemove.push(cell.gem);
+        //this.#gemsToRemove.push(cell.gem);
+        cell.permanentMark = false;
+        cell.mark = false;
         cell.gem.targetPos = new PIXI.Point(cell.position.x, cell.position.y + this.#boardHeight);
+        cell.gem.removeGem = true;
       }
     }
     this.#drop(() => {
       //? 0   -  rollear nuevas gemas -> insertarlas en board
       this.#newBoard();
-      //todo refactoriazar y aislar funcion para poder llamarla recursiva
-      //todo rehacer el spawn wilds para que dependa de cada cell la chance de mutacion
       //? 1   -  dropearlas
-      this.#solver(this.board.flat(), onComplete);
-      this.#removeGems(this.#gemsToRemove);
-    });
-  }
-  #solver(playableCells, onComplete) {
-    this.#drop(() => {
-      this.#spawnWild(playableCells, () => {
-        //? 2 - matchear SI matchea goto 3 - NO matchea goto 4
-        const wildCells = this.#getWildCells();
-        const matches = this.#findMatches(wildCells);
-        console.log("matches.length", matches.length);
-        if (matches.length) {
-          //? 3 - setear gem con needsClear = true y eliminar duplicados -> animar clear
-          this.#clearAndAnimateGems(matches, () => {
-            //? 4 - recalcular posiciones y agregar nuevas -> goto 1
-            this.#recalculatePositions();
-            const newCells = this.#fillBoard();
-            this.#resetBoard();
-            this.#solver(newCells, onComplete);
-          });
-        }
-        onComplete();
-        //? 5 - END
+      this.#drop(() => {
+        this.#spawnWild(this.board.flat(), () => {
+          this.#solver(onComplete);
+          //this.#removeGems(this.#gemsToRemove);
+        });
       });
     });
+  }
+  #solver(onComplete) {
+    //? 2 - matchear SI matchea goto 3 - NO matchea goto 4
+    const wildCells = this.#getWildCells();
+    const matches = this.#findMatches(wildCells);
+    if (matches.length) {
+      //? marcar las Cells
+      this.#markCells(0, matches, () => {
+        //? 3 - setear gem con needsClear = true y eliminar duplicados -> animar clear
+        this.#clearAndAnimateGems(matches, () => {
+          //? 4 - recalcular posiciones y agregar nuevas -> goto 1
+          this.#unMarkCells(matches);
+          this.#recalculatePositions();
+          const newCells = this.#fillBoard();
+          console.log("newCells", newCells);
+          this.#resetBoard();
+          this.#drop(() => {
+            this.#spawnWild(newCells, () => {
+              this.#solver(onComplete);
+            });
+          });
+        });
+      });
+    } else {
+      onComplete();
+      //? 5 - END
+    }
+  }
+  #unMarkCells(matches) {
+    matches.forEach((match) => {
+      match.data.forEach((cell) => (cell.mark = false));
+    });
+  }
+  #markCells(index, matches, onComplete) {
+    if (index >= matches.length) {
+      setTimeout(() => onComplete(), 500);
+      return;
+    }
+    setTimeout(() => {
+      matches[index].data.forEach((cell) => (cell.mark = true));
+      this.#markCells(index + 1, matches, onComplete);
+    }, 500);
   }
   #resetBoard() {
     for (let i = 0; i < this.#rows; i++) {
@@ -198,17 +225,20 @@ class BoardManager {
         uniqueRefs.add(cell);
       }
     }
+    //?revolear callback con data para los winnings
+    this.#onProfitHandler(matches, uniqueFlatMatches.length);
     //? setear gem con needsClear = true y -> animar clear
     uniqueFlatMatches.forEach((cell) => {
+      if (cell.gem.name === "wildGem") cell.permanentMark = true;
       cell.gem.needsClear = true;
+      cell.gem.removeGem = true;
       cell.gem.clear();
     });
     //? eliminar cells
     setTimeout(() => {
-      this.#removeGems(uniqueFlatMatches.map((cell) => cell.gem));
       uniqueFlatMatches.forEach((cell) => (cell.gem = null));
       onComplete();
-    }, 220);
+    }, 800);
   }
   #getWildCells() {
     const wildCells = [];
@@ -221,9 +251,13 @@ class BoardManager {
     return wildCells;
   }
   #addGem(i, j, top) {
-    this.board[i][j].createGem(this.#getRndGem(), new PIXI.Point(this.board[i][j].position.x, 64 * top));
+    this.board[i][j].createGem(
+      this.#getRndGem(),
+      new PIXI.Point(this.board[i][j].position.x, 64 * top),
+      this.boardContainer
+    );
     this.board[i][j].gem.targetPos = new PIXI.Point(this.board[i][j].position.x, this.board[i][j].position.y);
-    this.boardContainer.addChild(this.board[i][j].gem.sprite);
+    //this.boardContainer.addChild(this.board[i][j].gem.sprite);
   }
   #newBoard() {
     for (let j = 0; j < this.#cols; j++) {
@@ -252,7 +286,7 @@ class BoardManager {
     let wildCount = 0;
     for (let i = 0; i < playableCells.length; i++) {
       const rnd = Math.floor(Math.random() * 100);
-      if (rnd < 10) wildCount++;
+      if (rnd < 7) wildCount++;
     }
     wildCount = Math.min(wildCount, 6);
     while (wildCount > 0) {
@@ -262,9 +296,10 @@ class BoardManager {
         this.boardContainer.removeChild(playableCells[index].gem.sprite);
         playableCells[index].createGem(
           "wildGem",
-          new PIXI.Point(playableCells[index].position.x, playableCells[index].position.y)
+          new PIXI.Point(playableCells[index].position.x, playableCells[index].position.y),
+          this.boardContainer
         );
-        this.boardContainer.addChild(playableCells[index].gem.sprite);
+        //this.boardContainer.addChild(playableCells[index].gem.sprite);
       }
     }
     onComplete();
@@ -281,6 +316,7 @@ class BoardManager {
   #generateGemChances() {
     //GEM = 12 + 9 + 6 + 3
     //CHIP = 26 + 20 + 15 + 9
+    //chips 0 -> 69    gems 70 -> 99
     for (let i = 0; i < 100; i++) {
       if (i < 26) {
         this.#gemChances.push(1);
@@ -302,5 +338,113 @@ class BoardManager {
     }
   }
   #update() {}
+  //!FUNCIONES DE LEVEL 1
+  cross(onComplete) {
+    const i = Math.floor(Math.random() * this.#rows);
+    const j = Math.floor(Math.random() * this.#cols);
+    const cells = [];
+    for (let row = 0; row < this.#rows; row++) {
+      if (row !== i) cells.push(this.board[row][j]);
+    }
+    for (let col = 0; col < this.#cols; col++) {
+      if (col !== j) cells.push(this.board[i][col]);
+    }
+    cells.push(this.board[i][j]);
+    const parsedCells = [{ data: [...cells] }];
+    this.#markCells(0, parsedCells, () => {
+      //? 3 - setear gem con needsClear = true y eliminar duplicados -> animar clear
+      cells.forEach((cell) => {
+        cell.gem.needsClear = true;
+        cell.gem.removeGem = true;
+        cell.gem.clear();
+      });
+      this.#unMarkCells(parsedCells);
+      setTimeout(() => {
+        cells.forEach((cell) => (cell.gem = null));
+        this.#recalculatePositions();
+        const newCells = this.#fillBoard();
+        this.#resetBoard();
+        this.#drop(() => {
+          this.#spawnWild(newCells, () => {
+            this.#solver(onComplete);
+          });
+        });
+      }, 800);
+    });
+  }
+  //! FUNCIONES DE LEVEL 2
+  mutateGems(onComplete) {
+    const cellsToTransform = [];
+    for (let i = 0; i < this.#rows; i++) {
+      for (let j = 0; j < this.#cols; j++) {
+        const cell = this.board[i][j];
+        if (
+          cell.gem.name === "rubyGem" ||
+          cell.gem.name === "ametistGem" ||
+          cell.gem.name === "esmeraldGem" ||
+          cell.gem.name === "diamondGem"
+        ) {
+          cellsToTransform.push(cell);
+        }
+      }
+    }
+    cellsToTransform.forEach((cell) => (cell.mark = true));
+    this.#cicleGems(
+      0,
+      cellsToTransform,
+      () => {
+        this.#removeGems(cellsToTransform.map((cell) => cell.gem));
+        const rnd = Math.floor(Math.random() * 30 + 70);
+        cellsToTransform.forEach((cell) => {
+          cell.createGem(gemNames[this.#gemChances[rnd]], cell.position, this.boardContainer);
+          cell.mark = false;
+        });
+        this.#resetBoard();
+        this.#solver(onComplete);
+      },
+      6
+    );
+  }
+  #cicleGems(index, cells, onComplete, rndOld) {
+    if (index >= 10) {
+      setTimeout(() => onComplete(), 500);
+      return;
+    }
+    setTimeout(() => {
+      let rnd;
+      do {
+        rnd = Math.floor(Math.random() * 4 + 5);
+      } while (rnd === rndOld);
+      rndOld = rnd;
+      this.#removeGems(cells.map((cell) => cell.gem));
+      cells.forEach((cell) => {
+        cell.gem = null;
+        cell.createGem(gemNames[rnd], cell.position, this.boardContainer);
+      });
+      this.#cicleGems(index + 1, cells, onComplete, rndOld);
+    }, 300);
+  }
+  //! FUNCIONES DE LEVEL 3
+  wildShower(onComplete) {
+    for (let i = 0; i < this.#rows; i++) {
+      for (let j = 0; j < this.#cols; j++) {
+        const cell = this.board[i][j];
+        if (cell.permanentMark) {
+          cell.createGem("wildGem", cell.position, this.boardContainer);
+        }
+      }
+    }
+    this.#resetBoard();
+    this.#solver(() => {
+      for (let i = 0; i < this.#rows; i++) {
+        for (let j = 0; j < this.#cols; j++) {
+          this.board[i][j].permanentMark = false;
+          this.board[i][j].mark = false;
+        }
+      }
+      onComplete();
+    });
+  }
+  //! FUNCIONES DE LVL 4
 }
 export default BoardManager;

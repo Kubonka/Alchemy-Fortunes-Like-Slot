@@ -5,6 +5,7 @@ import * as PIXI from "pixi.js";
 import * as TWEEN from "@tweenjs/tween.js";
 import Gem from "./Gem";
 import Button from "./Button";
+import Acumulator from "./Acumulator";
 
 class GameManager {
   #tickerId;
@@ -15,11 +16,16 @@ class GameManager {
     }
     GameManager.#instance = this;
     this.world = new PixiApp();
-    this.gem;
     this.state = null;
+    this.balance = 1000;
+    this.currentBet = 1;
+    this.currentProfit = 0;
+    this.currentCount = 0;
+
     this.#start();
   }
   async #start() {
+    this.#generatePayTable();
     await this.world.loadAssets();
     const frames = [];
     for (const gem in this.world.assets) {
@@ -27,38 +33,60 @@ class GameManager {
         frames.push(this.world.assets[gem].textures[gemPath]);
       }
     }
-    this.boardManager = new BoardManager(this.world);
+    this.boardManager = new BoardManager(this.world, (matches, count) => this.#onProfit(matches, count));
+    this.acumulator = new Acumulator(this.world);
     this.backGround = new PIXI.Sprite(this.world.assets.backGround);
-    this.backGround.position.set(-87, -45);
-
+    this.backGround.scale.set(1.1, 1.1);
+    this.backGround.position.set(-140, -90); //-88 -43
     this.world.addChild(this.backGround);
+    this.acumulator = new Acumulator(this.world);
+
     this.spinButton = new Button(this.world, "wildGem", new PIXI.Point(700, 300));
     this.spinButton.setOnClickHandler(() => {
       if (this.state !== GameState.Animating) {
         this.state = GameState.Animating;
-        this.boardManager.spin(() => (this.state = GameState.Loading));
+        this.balance -= this.currentBet;
+        this.currentProfit = 0;
+        this.currentCount = 0;
+        this.acumulator.updateProgress(0);
+        this.#updateText();
+        this.boardManager.spin(() => (this.state = GameState.Level1));
       }
     });
+    //$TEXT
+    //?profit
+    this.profitText = new PIXI.Text("PROFIT");
+    this.profitText.position.set(1100, 700);
+    this.world.addChild(this.profitText);
+    //?level counter
+    this.countText = new PIXI.Text("COUNT");
+    this.countText.position.set(1100, 600);
+    this.world.addChild(this.countText);
+    //?balance
+    this.balanceText = new PIXI.Text("BALANCE");
+    this.balanceText.position.set(1100, 200);
+    this.world.addChild(this.balanceText);
+    //?messages
+    this.messages = new PIXI.Text("MESAGE");
+    this.messages.position.set(1000, 0);
+    this.world.addChild(this.messages);
+
     this.#tickerId = this.world.app.ticker.add((delta) => this.#update(delta));
     this.state = GameState.NewGame;
-    //this.#test();
-  }
-  #test() {
-    this.gem = new Gem(this.world, "ametistChip", new PIXI.Point(100, 100));
-    this.world.addChild(this.gem.sprite);
-    this.#move();
-  }
-  #move() {
-    const from = this.gem.sprite.position;
-    const to = new PIXI.Point(300, 300);
-    console.log(from, to);
-    const moveAnim = new TWEEN.Tween({ x: from.x, y: from.y }).to({ x: to.x, y: to.y }, 500);
-    moveAnim.onUpdate(({ x, y }, elapsed) => {
-      this.gem.sprite.position.set(x, y);
-    });
-    moveAnim.start();
   }
 
+  #onProfit(matches, count) {
+    this.currentProfit += this.#calculateProfit(matches);
+    this.currentCount += count;
+    this.balance += this.currentProfit;
+    this.#updateText();
+    this.acumulator.updateProgress(this.currentCount);
+  }
+  #updateText() {
+    this.balanceText.text = this.balance.toFixed(2);
+    this.countText.text = this.currentCount;
+    this.profitText.text = this.currentProfit.toFixed(2);
+  }
   #update() {
     switch (this.state) {
       case GameState.Initialize: {
@@ -66,17 +94,80 @@ class GameManager {
       }
       case GameState.NewGame:
         break;
+      case GameState.PlayerTurn: {
+        break;
+      }
+      case GameState.Level1:
+        if (this.currentCount >= 20) {
+          this.state = GameState.Animating;
+          this.boardManager.cross(() => (this.state = GameState.Level2));
+        }
+        break;
+      case GameState.Level2: {
+        console.log("level2");
+        if (this.currentCount >= 40) {
+          this.state = GameState.Animating;
+          this.boardManager.mutateGems(() => {
+            this.state = GameState.Level3;
+          });
+        }
+        break;
+      }
+      case GameState.Level3: {
+        console.log("level3");
+        if (this.currentCount >= 60) {
+          this.state = GameState.Animating;
+          this.boardManager.wildShower(() => {
+            console.log("sale");
+            this.state = GameState.Loading;
+          });
+        }
+        break;
+      }
       case GameState.Loading:
         break;
       case GameState.Animating:
         break;
-      case GameState.PlayerTurn: {
-        break;
-      }
 
       default:
         break;
     }
+  }
+  #generatePayTable() {
+    this.payOuts = {
+      ametistChip: [0.25, 0.4, 0.5, 0.6, 0.75, 1, 1, 1.5, 1.5, 1.5, 2, 2, 2, 2, 2, 3, 3, 3, 3, 3, 4, 4, 4, 4, 4, 15],
+      rubyChip: [0.25, 0.4, 0.5, 0.6, 0.75, 1, 1, 1.5, 1.5, 1.5, 2, 2, 2, 2, 2, 3, 3, 3, 3, 3, 4, 4, 4, 4, 4, 15],
+      esmeraldChip: [
+        0.4, 0.5, 0.6, 0.75, 1, 1.5, 1.5, 2, 2, 2, 3, 3, 3, 3, 3, 5, 5, 5, 5, 5, 7.5, 7.5, 7.5, 7.5, 7.5, 25,
+      ],
+      diamondChip: [
+        0.4, 0.5, 0.6, 0.75, 1, 1.5, 1.5, 2, 2, 2, 3, 3, 3, 3, 3, 5, 5, 5, 5, 5, 7.5, 7.5, 7.5, 7.5, 7.5, 25,
+      ],
+      ametistGem: [
+        0.6, 1, 1.5, 2, 3, 5, 5, 7.5, 7.5, 7.5, 10, 10, 10, 10, 10, 15, 15, 15, 15, 15, 20, 20, 20, 20, 20, 75,
+      ],
+      rubyGem: [
+        0.75, 1.5, 2.5, 4, 6, 10, 10, 15, 15, 15, 20, 20, 20, 20, 20, 30, 30, 30, 30, 30, 40, 40, 40, 40, 40, 150,
+      ],
+      esmeraldGem: [
+        1, 2, 4, 7, 10, 15, 15, 20, 20, 20, 30, 30, 30, 30, 30, 40, 40, 40, 40, 40, 60, 60, 60, 60, 60, 250,
+      ],
+      diamondGem: [
+        2, 4, 7.5, 15, 20, 25, 25, 35, 35, 35, 50, 50, 50, 50, 50, 75, 75, 75, 75, 75, 120, 120, 120, 120, 120, 500,
+      ],
+    };
+  }
+  #calculateProfit(matches) {
+    let currentProfit = 0;
+    console.log("matches", matches);
+    matches.forEach((match) => {
+      if (match.data.length < 30) {
+        currentProfit += this.payOuts[match.gemName][match.data.length - 5] * this.currentBet;
+      } else {
+        this.payOuts[match.gemName][this.payOuts.length - 1] * this.currentBet;
+      }
+    });
+    return currentProfit;
   }
 }
 export default GameManager;

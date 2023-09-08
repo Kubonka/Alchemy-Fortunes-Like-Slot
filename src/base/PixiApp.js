@@ -34,6 +34,12 @@ class PixiApp {
     });
     PIXI.Assets.add("backGround", "./static/gems/spriteSheets/backGround/backGround.png");
     this.assets.backGround = await PIXI.Assets.load("backGround");
+    PIXI.Assets.add("cellMark", "./static/gems/spriteSheets/cellMark/cellMark.png");
+    this.assets.cellMark = await PIXI.Assets.load("cellMark");
+    PIXI.Assets.add("acumulatorBg", "./static/gems/spriteSheets/acumulator/bg.png");
+    this.assets.acumulatorBg = await PIXI.Assets.load("acumulatorBg");
+    PIXI.Assets.add("acumulatorFill", "./static/gems/spriteSheets/acumulator/fill.png");
+    this.assets.acumulatorFill = await PIXI.Assets.load("acumulatorFill");
   }
   #update(delta) {
     TWEEN.update();
